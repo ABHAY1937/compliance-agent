@@ -65,21 +65,21 @@ Agent 4 receives a validated dataset (DQ Score: 98.2%) from Agent 3 and uses Cla
 ### 📄 Report Generator
 Configure regulatory template, institution, and generate AI-drafted reports.
 
-![Report Generator](screenshots/screenshot-report-generator.png)
+![Report Generator](dashboard/report_generator.png)
 
 ---
 
 ### 📊 Raw Validated Metrics
 Explore all validated metrics received from Agent 3 — organized by compliance domain.
 
-![Raw Metrics](screenshots/screenshot-raw-metrics.png)
+![Raw Metrics](dashboard/raw_metrics.png)
 
 ---
 
 ### 💬 Ask Agent (Chat Interface)
 Chat with Agent 4 to ask questions about compliance metrics, regulations, and methodology.
 
-![Ask Agent](screenshots/screenshot-ask-agent.png)
+![Ask Agent](dashboard/ask_agent.png)
 
 ---
 

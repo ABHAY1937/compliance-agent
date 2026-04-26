@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Compliance Monitor — Agent 4: Report Drafting</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --surface3: #1e2d42;
+    --border: rgba(99,170,255,0.12);
+    --border-accent: rgba(99,170,255,0.28);
+    --text: #e8edf5;
+    --text-muted: #7a8fa8;
+    --text-dim: #4a607a;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #10b981;
+    --green-bg: rgba(16,185,129,0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.1);
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139,92,246,0.1);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --serif: 'DM Serif Display', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* TOP NAV */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 10px; }
+  .nav-brand .agent-badge {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+  }
+  .nav-brand span { font-weight: 500; font-size: 15px; color: var(--text); }
+  .nav-brand small { color: var(--text-muted); font-size: 12px; margin-left: 4px; }
+  .nav-pills { display: flex; gap: 4px; }
+  .nav-pill {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .nav-pill:hover { background: var(--surface2); color: var(--text); }
+  .nav-pill.active { background: var(--surface3); color: var(--accent2); }
+
+  /* LAYOUT */
+  .app { display: flex; flex: 1; height: calc(100vh - 56px); overflow: hidden; }
+  .sidebar {
+    width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .main { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* SIDEBAR */
+  .sidebar-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.75rem; font-family: var(--mono); }
+  
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .metric-row .label { color: var(--text-muted); }
+  .metric-row .val { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+  }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  .agent-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pipeline-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: var(--surface2);
+  }
+  .pipeline-step.active { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); }
+  .pipeline-step .step-num { font-family: var(--mono); font-size: 10px; color: var(--text-dim); min-width: 20px; }
+  .pipeline-step .step-name { color: var(--text-muted); flex: 1; }
+  .pipeline-step.active .step-name { color: var(--accent2); }
+  .step-status { font-size: 10px; font-family: var(--mono); }
+
+  /* GENERATE PANEL */
+  .generate-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .panel-title {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title .icon { font-size: 20px; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .form-control {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-control:focus { border-color: var(--accent); }
+  select.form-control { cursor: pointer; }
+
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+  .checkbox-row input { accent-color: var(--accent); cursor: pointer; }
+
+  .btn-generate {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 1rem;
+  }
+  .btn-generate:hover { opacity: 0.9; }
+  .btn-generate:active { transform: scale(0.99); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3rem;
+    text-align: center;
+  }
+  .loading-overlay.show { display: block; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text-muted); font-size: 14px; }
+  .loading-sub { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-top: 8px; }
+
+  /* REPORT OUTPUT */
+  #report-output { display: none; }
+  #report-output.show { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .report-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+  }
+  .report-id { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
+  .report-title { font-family: var(--serif); font-size: 26px; color: var(--text); margin-bottom: 4px; }
+  .report-meta { display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap; }
+  .report-meta-item { font-size: 12px; }
+  .report-meta-item .key { color: var(--text-dim); margin-bottom: 2px; }
+  .report-meta-item .val { color: var(--text-muted); font-family: var(--mono); font-size: 11px; }
+
+  .compliance-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--green-bg);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+  }
+  .compliance-banner.warn { background: var(--amber-bg); border-color: rgba(245,158,11,0.25); }
+  .compliance-banner.fail { background: var(--red-bg); border-color: rgba(239,68,68,0.25); }
+  .banner-score { font-family: var(--mono); font-size: 28px; font-weight: 500; }
+  .banner-score.green { color: var(--green); }
+  .banner-score.amber { color: var(--amber); }
+  .banner-score.red { color: var(--red); }
+  .banner-details { flex: 1; }
+  .banner-status { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .banner-sub { font-size: 12px; color: var(--text-muted); }
+
+  /* SUMMARY CARDS */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .summary-card .sc-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-family: var(--mono); }
+  .summary-card .sc-value { font-size: 22px; font-weight: 500; font-family: var(--mono); }
+  .summary-card .sc-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* SECTIONS */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .section-header:hover { background: var(--surface2); }
+  .section-title { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .section-ref { font-size: 11px; font-family: var(--mono); color: var(--text-dim); }
+  .section-badges { display: flex; align-items: center; gap: 8px; }
+  .badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .score-bar-mini { width: 80px; height: 4px; background: var(--surface3); border-radius: 2px; }
+  .score-bar-fill { height: 100%; border-radius: 2px; }
+
+  .section-body { padding: 1.25rem; display: none; }
+  .section-body.open { display: block; }
+
+  .metrics-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .metrics-table th { color: var(--text-dim); font-weight: 500; text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .metrics-table td { padding: 8px 10px; border-bottom: 1px solid rgba(99,170,255,0.05); color: var(--text-muted); vertical-align: top; }
+  .metrics-table tr:last-child td { border-bottom: none; }
+  .metrics-table .field-internal { color: var(--text); font-weight: 500; }
+  .metrics-table .field-value { font-family: var(--mono); color: var(--accent2); }
+  .metrics-table .field-threshold { font-family: var(--mono); color: var(--text-dim); }
+
+  .pass-pill { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 10px; }
+  .pass-pill.pass { color: var(--green); }
+  .pass-pill.fail { color: var(--red); }
+  .pass-pill.warning { color: var(--amber); }
+
+  .section-narrative { 
+    background: var(--surface2);
+    border-left: 2px solid var(--accent);
+    padding: 12px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 1rem;
+  }
+
+  .recommendations { margin-top: 1rem; }
+  .rec-title { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-family: var(--mono); }
+  .rec-item { display: flex; gap: 8px; font-size: 12px; color: var(--text-muted); padding: 4px 0; align-items: flex-start; }
+  .rec-item::before { content: '→'; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+  /* EXECUTIVE SUMMARY */
+  .exec-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .exec-card h3 { font-size: 14px; font-weight: 500; margin-bottom: 1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); font-size: 11px; }
+  .exec-text { font-size: 14px; line-height: 1.7; color: var(--text-muted); }
+  .key-findings { display: flex; flex-direction: column; gap: 6px; margin-top: 1rem; }
+  .finding-item { display: flex; gap: 10px; font-size: 13px; color: var(--text-muted); align-items: flex-start; padding: 6px; border-radius: 6px; background: var(--surface2); }
+  .finding-item .fi-icon { color: var(--green); flex-shrink: 0; }
+
+  /* DATA QUALITY */
+  .dq-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .dq-card { background: var(--surface2); border-radius: 8px; padding: 12px; text-align: center; }
+  .dq-score { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+  .dq-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* CERTIFICATION */
+  .cert-card {
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+    border: 1px solid rgba(99,170,255,0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .cert-info { flex: 1; }
+  .cert-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .cert-sub { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .cert-badge {
+    background: var(--green-bg);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--green);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* CHAT PANEL */
+  #chat-view { display: none; flex-direction: column; height: 100%; }
+  #chat-view.active { display: flex; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .chat-msg { max-width: 80%; }
+  .chat-msg.user { align-self: flex-end; }
+  .chat-msg.agent { align-self: flex-start; }
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .user .msg-bubble { background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.3); color: var(--text); }
+  .agent .msg-bubble { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); }
+  .msg-label { font-size: 10px; font-family: var(--mono); color: var(--text-dim); margin-bottom: 4px; }
+  .chat-input-bar { 
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .btn-send {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-weight: 500;
+    transition: opacity 0.15s;
+  }
+  .btn-send:hover { opacity: 0.85; }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .typing-indicator { display: flex; gap: 4px; padding: 10px 14px; align-items: center; }
+  .typing-dot { width: 6px; height: 6px; background: var(--text-dim); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* METRICS VIEW */
+  #metrics-view { display: none; }
+  #metrics-view.active { display: block; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+  .metric-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .metric-block-header { 
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .metric-block-title { font-size: 13px; font-weight: 500; }
+  .metric-block-body { padding: 12px 16px; }
+  .raw-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid rgba(99,170,255,0.04); }
+  .raw-row:last-child { border-bottom: none; }
+  .raw-key { color: var(--text-dim); }
+  .raw-val { font-family: var(--mono); color: var(--text-muted); font-size: 11px; }
+
+  .chevron { transition: transform 0.2s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fadeInUp 0.3s ease; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <span class="agent-badge">AGENT 4</span>
+    <span>AI Compliance Monitor</span>
+    <small>/ Report Drafting Agent</small>
+  </div>
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="switchView('report')">📄 Report Generator</button>
+    <button class="nav-pill" onclick="switchView('metrics')">📊 Raw Metrics</button>
+    <button class="nav-pill" onclick="switchView('chat')">💬 Ask Agent</button>
+  </div>
+</nav>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Agent Pipeline</div>
+      <div class="agent-pipeline">
+        <div class="pipeline-step">
+          <span class="step-num">AG1</span>
+          <span class="step-name">Data Ingestion</span>
+          <span class="step-status" style="color:var(--green)">✓</span>
+        </div>
+        <div class="pipeline-step">
+          <span class="step-num">AG2</span>
+          <span class="step-name">Anomaly Detection</span>
+          <span class="step-status" style="color:var(--green)">✓</span>
+        </div>
+        <div class="pipeline-step">
+          <span class="step-num">AG3</span>
+          <span class="step-name">Data Validation</span>
+          <span class="step-status" style="color:var(--green)">✓</span>
+        </div>
+        <div class="pipeline-step active">
+          <span class="step-num">AG4</span>
+          <span class="step-name">Report Drafting</span>
+          <span class="step-status" style="color:var(--accent2)" id="agent4-status">●</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Data Source</div>
+      <div class="metric-row">
+        <span class="label">Institution</span>
+        <span class="val">FinCorp Global</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Period</span>
+        <span class="val">Q1 2025</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">Validated by</span>
+        <span class="val">Agent 3</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">DQ Score</span>
+        <span class="val" style="color:var(--green)">98.2%</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Compliance Overview</div>
+      <div class="metric-row">
+        <span class="label"><span class="status-dot dot-green"></span>Capital Ratio</span>
+        <span class="val" style="color:var(--green)">PASS</span>
+      </div>
+      <div class="metric-row">
+        <span class="label"><span class="status-dot dot-green"></span>Liquidity (LCR)</span>
+        <span class="val" style="color:var(--green)">PASS</span>
+      </div>
+      <div class="metric-row">
+        <span class="label"><span class="status-dot dot-green"></span>AML / KYC</span>
+        <span class="val" style="color:var(--green)">PASS</span>
+      </div>
+      <div class="metric-row">
+        <span class="label"><span class="status-dot dot-amber"></span>Operational Risk</span>
+        <span class="val" style="color:var(--amber)">MINOR</span>
+      </div>
+      <div class="metric-row">
+        <span class="label"><span class="status-dot dot-green"></span>Credit Risk</span>
+        <span class="val" style="color:var(--green)">PASS</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Key Ratios</div>
+      <div class="metric-row">
+        <span class="label">Tier 1 Capital</span>
+        <span class="val">11.13%</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">LCR</span>
+        <span class="val">129.1%</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">NSFR</span>
+        <span class="val">112.4%</span>
+      </div>
+      <div class="metric-row">
+        <span class="label">NPL Ratio</span>
+        <span class="val">1.40%</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main" id="report-view">
+    <!-- GENERATE PANEL -->
+    <div class="generate-panel">
+      <div class="panel-title">
+        <span class="icon">⚙️</span>
+        Configure & Generate Report
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Regulatory Template</label>
+          <select class="form-control" id="template-select">
+            <option value="COMPREHENSIVE">Comprehensive Compliance Report</option>
+            <option value="BASEL_III">Basel III Capital & Liquidity</option>
+            <option value="AML_CTF">AML/CTF Compliance Report</option>
+            <option value="OPERATIONAL_RISK">Operational Risk Report</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Institution Name (optional override)</label>
+          <input type="text" class="form-control" id="institution-input" placeholder="FinCorp Global Bank">
+        </div>
+        <div class="form-group" style="grid-column: 1/-1;">
+          <label class="form-label">Custom Notes for Agent</label>
+          <input type="text" class="form-control" id="custom-notes" placeholder="e.g. Focus on Q1 capital stress scenarios...">
+        </div>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="include-recs" checked>
+        Include AI-generated recommendations for improvement areas
+      </label>
+
+      <button class="btn-generate" id="generate-btn" onclick="generateReport()">
+        🤖 Generate Regulatory Report with AI Agent
+      </button>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Agent 4 is drafting your regulatory report...</div>
+      <div class="loading-sub" id="loading-sub">Mapping validated metrics to regulatory templates</div>
+    </div>
+
+    <!-- REPORT OUTPUT -->
+    <div id="report-output">
+      <!-- dynamically populated -->
+    </div>
+  </main>
+
+  <!-- METRICS VIEW -->
+  <main class="main" id="metrics-view">
+    <div style="font-size:20px;font-weight:500;margin-bottom:0.5rem;">Raw Validated Metrics</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem;">Source data received from Agent 3 — Data Validation Agent</div>
+    <div class="metrics-grid" id="metrics-grid"></div>
+  </main>
+
+  <!-- CHAT VIEW -->
+  <div class="main" id="chat-view" style="padding:0;overflow:hidden;">
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg agent animate-in">
+        <div class="msg-label">AGENT 4 — REPORT DRAFTING</div>
+        <div class="msg-bubble">
+          Hello! I'm Agent 4 — the Report Drafting Agent in the AI Compliance Monitoring pipeline.<br><br>
+          I can help you:<br>
+          • Explain any metric or regulatory ratio<br>
+          • Clarify Basel III, AML/CTF, or operational risk concepts<br>
+          • Walk through the report generation methodology<br>
+          • Answer questions about the compliance results<br><br>
+          What would you like to know?
+        </div>
+      </div>
+    </div>
+    <div class="chat-input-bar">
+      <input class="chat-input" id="chat-input" placeholder="Ask about compliance metrics, regulations, or report methodology..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="btn-send" id="send-btn" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let lastReport = null;
+
+// VIEW SWITCHING
+function switchView(view) {
+  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('report-view').style.display = 'none';
+  document.getElementById('metrics-view').classList.remove('active');
+  document.getElementById('chat-view').classList.remove('active');
+
+  if (view === 'report') {
+    document.getElementById('report-view').style.display = 'flex';
+    document.getElementById('report-view').style.flexDirection = 'column';
+  } else if (view === 'metrics') {
+    document.getElementById('metrics-view').classList.add('active');
+    loadMetrics();
+  } else if (view === 'chat') {
+    document.getElementById('chat-view').classList.add('active');
+  }
+}
+
+// Show report view by default
+document.getElementById('report-view').style.display = 'flex';
+document.getElementById('report-view').style.flexDirection = 'column';
+
+// LOADING messages
+const loadingMessages = [
+  'Mapping validated metrics to regulatory templates...',
+  'Calculating aggregated compliance ratios...',
+  'Applying Basel III / AML regulatory mappings...',
+  'Generating section narratives and analysis...',
+  'Finalizing compliance status assessments...'
+];
+let loadingIdx = 0;
+let loadingInterval;
+
+function startLoadingCycle() {
+  loadingIdx = 0;
+  document.getElementById('loading-sub').textContent = loadingMessages[0];
+  loadingInterval = setInterval(() => {
+    loadingIdx = (loadingIdx + 1) % loadingMessages.length;
+    document.getElementById('loading-sub').textContent = loadingMessages[loadingIdx];
+  }, 1800);
+}
+
+// GENERATE REPORT
+async function generateReport() {
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('report-output').classList.remove('show');
+  document.getElementById('report-output').innerHTML = '';
+  document.getElementById('agent4-status').style.animation = 'spin 1s linear infinite';
+  startLoadingCycle();
+
+  try {
+    const body = {
+      template_type: document.getElementById('template-select').value,
+      institution_name: document.getElementById('institution-input').value || null,
+      custom_notes: document.getElementById('custom-notes').value || null,
+      include_recommendations: document.getElementById('include-recs').checked
+    };
+
+    const res = await fetch(`${API}/generate-report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    lastReport = data.report;
+    renderReport(data.report);
+  } catch (err) {
+    document.getElementById('report-output').innerHTML = `
+      <div style="background:var(--red-bg);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1.5rem;color:var(--red);">
+        <strong>Error generating report</strong><br><small>${err.message}</small><br>
+        <small style="color:var(--text-muted);margin-top:8px;display:block;">Make sure the Python backend is running: <code>python backend/main.py</code></small>
+      </div>`;
+    document.getElementById('report-output').classList.add('show');
+  } finally {
+    clearInterval(loadingInterval);
+    document.getElementById('loading').classList.remove('show');
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Generate Regulatory Report with AI Agent';
+    document.getElementById('agent4-status').style.animation = '';
+  }
+}
+
+function fmtNum(n) {
+  if (n === null || n === undefined) return 'N/A';
+  if (typeof n === 'number' && n > 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+  return n;
+}
+
+function statusColor(s) {
+  if (!s) return 'var(--text-muted)';
+  s = s.toUpperCase();
+  if (s.includes('PASS') || s.includes('COMPLIANT')) return 'var(--green)';
+  if (s.includes('WARN') || s.includes('MINOR') || s.includes('PARTIAL')) return 'var(--amber)';
+  if (s.includes('FAIL') || s.includes('NON')) return 'var(--red)';
+  return 'var(--text-muted)';
+}
+
+function badgeClass(s) {
+  if (!s) return 'badge-amber';
+  s = s.toUpperCase();
+  if (s.includes('PASS') || s.includes('COMPLIANT')) return 'badge-green';
+  if (s.includes('FAIL') || s.includes('NON')) return 'badge-red';
+  return 'badge-amber';
+}
+
+function pillClass(s) {
+  if (!s) return 'warning';
+  s = s.toUpperCase();
+  if (s === 'PASS') return 'pass';
+  if (s === 'FAIL') return 'fail';
+  return 'warning';
+}
+
+function renderReport(r) {
+  const meta = r.report_metadata || {};
+  const exec = r.executive_summary || {};
+  const sections = r.sections || [];
+  const dq = r.data_quality_assessment || {};
+  const cert = r.certification || {};
+
+  const score = meta.overall_compliance_score || 0;
+  const scoreColor = score >= 85 ? 'green' : score >= 65 ? 'amber' : 'red';
+  const bannerClass = score >= 85 ? '' : score >= 65 ? 'warn' : 'fail';
+  const overallStatus = meta.overall_compliance_status || 'UNKNOWN';
+
+  let html = `
+  <!-- HEADER -->
+  <div class="report-header animate-in">
+    <div class="report-id">REPORT ID: ${meta.report_id || 'N/A'} &nbsp;|&nbsp; ${meta.agent_id || 'Agent-4'}</div>
+    <div class="report-title">${meta.report_title || 'Regulatory Compliance Report'}</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">${meta.institution || 'Institution'} &nbsp;·&nbsp; ${meta.reporting_period || ''}</div>
+    <div class="report-meta">
+      <div class="report-meta-item"><div class="key">Template</div><div class="val">${meta.template_used || 'N/A'}</div></div>
+      <div class="report-meta-item"><div class="key">Regulator</div><div class="val">${meta.regulator || 'N/A'}</div></div>
+      <div class="report-meta-item"><div class="key">Generated</div><div class="val">${new Date(meta.generated_at || Date.now()).toLocaleString()}</div></div>
+    </div>
+    <div class="compliance-banner ${bannerClass}" style="margin-top:1.25rem;">
+      <div class="banner-score ${scoreColor}">${score}%</div>
+      <div class="banner-details">
+        <div class="banner-status" style="color:${statusColor(overallStatus)}">Overall Status: ${overallStatus}</div>
+        <div class="banner-sub">${sections.length} regulatory sections assessed &nbsp;·&nbsp; Data Quality Score: ${dq.overall_score || 'N/A'}%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid animate-in">
+    <div class="summary-card">
+      <div class="sc-label">Compliance Score</div>
+      <div class="sc-value" style="color:${scoreColor==='green'?'var(--green)':scoreColor==='amber'?'var(--amber)':'var(--red)'}">${score}%</div>
+      <div class="sc-sub">${overallStatus}</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Sections Assessed</div>
+      <div class="sc-value">${sections.length}</div>
+      <div class="sc-sub">${sections.filter(s=>s.compliance_status?.toUpperCase().includes('COMPLIANT')).length} compliant</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Data Quality</div>
+      <div class="sc-value" style="color:var(--green)">${dq.overall_score || 'N/A'}%</div>
+      <div class="sc-sub">${dq.fields_validated || ''} fields validated</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Key Findings</div>
+      <div class="sc-value">${(exec.key_findings||[]).length}</div>
+      <div class="sc-sub">${(exec.critical_alerts||[]).length} critical alerts</div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="exec-card animate-in">
+    <h3>Executive Summary</h3>
+    <div class="exec-text">${exec.summary_text || ''}</div>
+    ${(exec.key_findings||[]).length > 0 ? `
+    <div class="key-findings">
+      ${exec.key_findings.map(f=>`<div class="finding-item"><span class="fi-icon">✓</span>${f}</div>`).join('')}
+    </div>` : ''}
+    ${(exec.critical_alerts||[]).length > 0 ? `
+    <div style="margin-top:1rem;">
+      ${exec.critical_alerts.map(a=>`<div class="finding-item" style="background:var(--red-bg);"><span style="color:var(--red)">!</span>${a}</div>`).join('')}
+    </div>` : ''}
+  </div>
+
+  <!-- SECTIONS -->
+  <div style="font-size:13px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);font-size:11px;">Regulatory Sections</div>
+  ${sections.map((sec, i) => {
+    const score = sec.compliance_score || 0;
+    const bc = badgeClass(sec.compliance_status);
+    const barColor = bc==='badge-green'?'var(--green)':bc==='badge-red'?'var(--red)':'var(--amber)';
+    return `
+    <div class="section-card animate-in" style="animation-delay:${i*0.05}s">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div>
+          <div class="section-title">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${sec.section_id||''}</span>
+            ${sec.section_name||'Section'}
+          </div>
+          <div class="section-ref">${sec.regulatory_reference||''}</div>
+        </div>
+        <div class="section-badges">
+          <div style="text-align:right;">
+            <div style="font-family:var(--mono);font-size:13px;font-weight:500;color:${barColor}">${score}%</div>
+            <div class="score-bar-mini" style="margin-top:4px;margin-left:auto;">
+              <div class="score-bar-fill" style="width:${score}%;background:${barColor}"></div>
+            </div>
+          </div>
+          <span class="badge ${bc}">${sec.compliance_status||'N/A'}</span>
+          <span class="chevron" style="color:var(--text-dim)">▾</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Internal Field</th>
+              <th>Regulatory Field</th>
+              <th>Value</th>
+              <th>Threshold</th>
+              <th>Unit</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(sec.metrics||[]).map(m=>`
+            <tr>
+              <td class="field-internal">${m.field_name||''}</td>
+              <td style="color:var(--text-dim)">${m.regulatory_field||''}</td>
+              <td class="field-value">${fmtNum(m.value)}</td>
+              <td class="field-threshold">${m.threshold||'N/A'}</td>
+              <td style="color:var(--text-dim);font-family:var(--mono);font-size:11px">${m.unit||''}</td>
+              <td><span class="pass-pill ${pillClass(m.status)}">${m.status==='PASS'?'●':m.status==='FAIL'?'●':'▲'} ${m.status||''}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${sec.section_narrative ? `<div class="section-narrative">${sec.section_narrative}</div>` : ''}
+        ${(sec.recommendations||[]).length > 0 ? `
+        <div class="recommendations">
+          <div class="rec-title">Recommendations</div>
+          ${sec.recommendations.map(r=>`<div class="rec-item">${r}</div>`).join('')}
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('')}
+
+  <!-- DATA QUALITY -->
+  <div class="exec-card animate-in">
+    <h3>Data Quality Assessment</h3>
+    <div class="dq-grid">
+      <div class="dq-card"><div class="dq-score" style="color:var(--green)">${dq.overall_score||'N/A'}%</div><div class="dq-label">Overall</div></div>
+      <div class="dq-card"><div class="dq-score">${dq.completeness||'N/A'}%</div><div class="dq-label">Completeness</div></div>
+      <div class="dq-card"><div class="dq-score">${dq.accuracy||'N/A'}%</div><div class="dq-label">Accuracy</div></div>
+      <div class="dq-card"><div class="dq-score">${dq.timeliness||'N/A'}%</div><div class="dq-label">Timeliness</div></div>
+    </div>
+    ${dq.notes ? `<div class="section-narrative" style="margin-top:1rem">${dq.notes}</div>` : ''}
+  </div>
+
+  <!-- CERTIFICATION -->
+  <div class="cert-card animate-in">
+    <div class="cert-info">
+      <div class="cert-title">Report Certification</div>
+      <div class="cert-sub">
+        Prepared by: ${cert.prepared_by||'Agent 4'}<br>
+        Validated by: ${cert.validated_by||'Agent 3'}<br>
+        ${cert.certification_statement||''}
+      </div>
+    </div>
+    <div class="cert-badge">
+      ${cert.submission_ready ? '✓ SUBMISSION READY' : '⚠ REVIEW REQUIRED'}
+    </div>
+  </div>`;
+
+  const out = document.getElementById('report-output');
+  out.innerHTML = html;
+  out.classList.add('show');
+  out.scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+// METRICS VIEW
+async function loadMetrics() {
+  const grid = document.getElementById('metrics-grid');
+  if (grid.children.length > 0) return;
+  try {
+    const res = await fetch(`${API}/metrics`);
+    const data = await res.json();
+    const blocks = Object.entries(data).filter(([k,v]) => typeof v === 'object' && v !== null);
+    grid.innerHTML = blocks.map(([key, val]) => `
+      <div class="metric-block">
+        <div class="metric-block-header">
+          <span class="metric-block-title">${key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
+          ${val.status ? `<span class="badge ${badgeClass(val.status)}">${val.status}</span>` : ''}
+        </div>
+        <div class="metric-block-body">
+          ${Object.entries(val).filter(([k])=>k!=='status').map(([k,v])=>`
+            <div class="raw-row">
+              <span class="raw-key">${k.replace(/_/g,' ')}</span>
+              <span class="raw-val">${typeof v==='number'&&v>1000000?'$'+(v/1000000).toFixed(1)+'M':v}</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="color:var(--text-muted);font-size:13px;">Could not load metrics. Is the backend running?</div>`;
+  }
+}
+
+// CHAT
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const msgs = document.getElementById('chat-messages');
+  input.value = '';
+  document.getElementById('send-btn').disabled = true;
+
+  msgs.innerHTML += `
+    <div class="chat-msg user animate-in">
+      <div class="msg-label" style="text-align:right">YOU</div>
+      <div class="msg-bubble">${msg}</div>
+    </div>`;
+
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg agent animate-in';
+  typing.innerHTML = `<div class="msg-label">AGENT 4</div><div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, report_context: lastReport ? { summary: lastReport.report_metadata } : null })
+    });
+    const data = await res.json();
+    typing.querySelector('.msg-bubble').innerHTML = data.response.replace(/\n/g,'<br>');
+  } catch(e) {
+    typing.querySelector('.msg-bubble').innerHTML = `<span style="color:var(--red)">Failed to reach Agent 4. Is the backend running?</span>`;
+  }
+
+  document.getElementById('send-btn').disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function badgeClass(s) {
+  if (!s) return 'badge-amber';
+  s = s.toUpperCase();
+  if (s.includes('PASS') || s.includes('COMPLIANT') || s.includes('READY')) return 'badge-green';
+  if (s.includes('FAIL') || s.includes('NON')) return 'badge-red';
+  return 'badge-amber';
+}
+</script>
+</body>
+</html>
